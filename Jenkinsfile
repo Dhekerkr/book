@@ -11,6 +11,7 @@ pipeline {
     stage('Frontend Build') {
       steps {
         dir('.') {
+          sh 'ls -l package-lock.json'
           sh 'npm ci'
           sh 'npm run lint'
           sh 'npm run build'
