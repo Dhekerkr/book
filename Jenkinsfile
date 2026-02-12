@@ -1,82 +1,98 @@
 pipeline {
-    agent any
+  agent any
 
-    environment {
-        REGISTRY = "dhekerkr"
-        TAG = "${env.GIT_COMMIT}"
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+  }
+
+  environment {
+    APP_NAME = "book-review-app"
+    TAG = "${env.BUILD_NUMBER}"
+  }
+
+  stages {
+    stage('Prepare') {
+      steps {
+        script {
+          sh 'node -v'
+          sh 'npm -v'
+          sh 'docker --version'
+          sh 'docker compose version'
+        }
+      }
     }
 
-    stages {
-
-        stage('Checkout') {
-            steps {
-                checkout scm
-                sh 'ls -l'
-            }
+    stage('Install Frontend') {
+      steps {
+        dir('.') {
+          script {
+            sh 'npm ci'
+          }
         }
-
-        stage('Frontend Build') {
-            steps {
-                dir('.') {
-                    sh 'npm install'  // utiliser npm install si npm ci échoue
-                    sh 'npm run lint'
-                    sh 'npm run build'
-                }
-            }
-        }
-
-        stage('Install Services') {
-            parallel {
-                stage('Auth Service') {
-                    steps {
-                        dir('services/auth-service') {
-                            sh 'npm install'
-                        }
-                    }
-                }
-                stage('Books Service') {
-                    steps {
-                        dir('services/books-service') {
-                            sh 'npm install'
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Build Docker Images') {
-            steps {
-                sh """
-                docker build -t ${REGISTRY}/book-review-frontend:${TAG} -t ${REGISTRY}/book-review-frontend:latest .
-                docker build -t ${REGISTRY}/book-review-auth:${TAG} -t ${REGISTRY}/book-review-auth:latest services/auth-service
-                docker build -t ${REGISTRY}/book-review-books:${TAG} -t ${REGISTRY}/book-review-books:latest services/books-service
-                docker build -t ${REGISTRY}/book-review-mysql:${TAG} -t ${REGISTRY}/book-review-mysql:latest infra/mysql
-                """
-            }
-        }
-
-        stage('Push Docker Images') {
-            steps {
-                sh """
-                docker push ${REGISTRY}/book-review-frontend:${TAG}
-                docker push ${REGISTRY}/book-review-frontend:latest
-                docker push ${REGISTRY}/book-review-auth:${TAG}
-                docker push ${REGISTRY}/book-review-auth:latest
-                docker push ${REGISTRY}/book-review-books:${TAG}
-                docker push ${REGISTRY}/book-review-books:latest
-                docker push ${REGISTRY}/book-review-mysql:${TAG}
-                docker push ${REGISTRY}/book-review-mysql:latest
-                """
-            }
-        }
-
-        stage('Deploy with Docker Compose') {
-            steps {
-                sh """
-                docker-compose down || true
-                docker-compose up -d --build --remove-orphans
-                """
-            }
-        }
+      }
     }
+
+    stage('Install Services') {
+      parallel {
+        stage('Auth Service') {
+          steps {
+            dir('services/auth-service') {
+              script {
+                sh 'npm ci'
+              }
+            }
+          }
+        }
+        stage('Books Service') {
+          steps {
+            dir('services/books-service') {
+              script {
+                sh 'npm ci'
+              }
+            }
+          }
+        }
+      }
+    }
+
+    stage('Lint & Build Frontend') {
+      steps {
+        dir('.') {
+          script {
+            sh 'npm run lint'
+            sh 'npm run build'
+          }
+        }
+      }
+    }
+
+    stage('Build Docker Images (Local)') {
+      steps {
+        script {
+          sh "docker build -t ${APP_NAME}-frontend:${TAG} -t ${APP_NAME}-frontend:latest ."
+          sh "docker build -t ${APP_NAME}-auth:${TAG} -t ${APP_NAME}-auth:latest services/auth-service"
+          sh "docker build -t ${APP_NAME}-books:${TAG} -t ${APP_NAME}-books:latest services/books-service"
+          sh "docker build -t ${APP_NAME}-mysql:${TAG} -t ${APP_NAME}-mysql:latest infra/mysql"
+        }
+      }
+    }
+
+    stage('Deploy Local Stack') {
+      steps {
+        script {
+          sh 'docker compose up -d --build --remove-orphans'
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo 'Local deployment completed successfully.'
+    }
+    failure {
+      echo 'Pipeline failed. Check logs from the failing stage.'
+    }
+  }
 }
