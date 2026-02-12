@@ -78,13 +78,7 @@ pipeline {
       }
     }
 
-    stage('Deploy Local Stack') {
-      steps {
-        script {
-          sh 'docker compose up -d --build --remove-orphans'
-        }
-      }
-    }
+  
   }
 
   post {
