@@ -60,8 +60,8 @@ pipeline {
 
     stage('Deploy (Template)') {
       steps {
-        sh 'docker compose pull || true'
-        sh 'docker compose up -d --remove-orphans'
+        sh 'docker-compose pull || true'
+        sh 'docker-compose up -d --remove-orphans'
       }
     }
   }
