@@ -20,6 +20,65 @@ pipeline {
           sh 'npm -v'
           sh 'docker --version'
           sh 'kubectl version --client'
+        }
+      }
+    }
+
+    stage('Install Frontend') {
+      steps {
+        dir('.') {
+          script {
+            sh 'npm ci'
+          }
+        }
+      }
+    }
+
+    stage('Install Services') {
+      parallel {
+        stage('Auth Service') {
+          steps {
+            dir('services/auth-service') {
+              script {
+                sh 'npm ci'
+              }
+            }
+          }
+        }
+        stage('Books Service') {
+          steps {
+            dir('services/books-service') {
+              script {
+                sh 'npm ci'
+              }
+            }
+          }
+        }
+      }
+    }
+
+    stage('Lint & Build Frontend') {
+      steps {
+        dir('.') {
+          script {
+            sh 'npm run lint'
+            sh 'npm run build'
+          }
+        }
+      }
+    }
+
+    stage('Build Docker Images (Local)') {
+      steps {
+        script {
+          sh "docker build -t ${APP_NAME}-frontend:${TAG} -t ${APP_NAME}-frontend:latest ."
+          sh "docker build -t ${APP_NAME}-auth:${TAG} -t ${APP_NAME}-auth:latest services/auth-service"
+          sh "docker build -t ${APP_NAME}-books:${TAG} -t ${APP_NAME}-books:latest services/books-service"
+          sh "docker build -t ${APP_NAME}-mysql:${TAG} -t ${APP_NAME}-mysql:latest infra/mysql"
+        }
+      }
+    }
+
     stage('Push Docker Hub (Frontend & Backend)') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_TOKEN')]) {
