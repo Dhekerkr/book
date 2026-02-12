@@ -7,7 +7,14 @@ pipeline {
   }
 
   stages {
+
     stage('Install & Lint Frontend') {
+      agent {
+        docker {
+          image 'node:20-alpine'
+          args '-u root:root'
+        }
+      }
       steps {
         dir('.') {
           sh 'npm ci'
@@ -20,13 +27,26 @@ pipeline {
     stage('Install Services') {
       parallel {
         stage('Auth Service') {
+          agent {
+            docker {
+              image 'node:20-alpine'
+              args '-u root:root'
+            }
+          }
           steps {
             dir('services/auth-service') {
               sh 'npm install'
             }
           }
         }
+
         stage('Books Service') {
+          agent {
+            docker {
+              image 'node:20-alpine'
+              args '-u root:root'
+            }
+          }
           steps {
             dir('services/books-service') {
               sh 'npm install'
@@ -60,8 +80,8 @@ pipeline {
 
     stage('Deploy (Template)') {
       steps {
-        sh 'docker-compose pull || true'
-        sh 'docker-compose up -d --remove-orphans'
+        sh 'docker-compose down || true'
+        sh 'docker-compose up -d --build --remove-orphans'
       }
     }
   }
