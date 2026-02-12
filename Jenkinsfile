@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    REGISTRY = "your-registry.example.com/your-namespace"
+    REGISTRY = "dhekerkr"
     TAG = "${env.GIT_COMMIT}"
   }
 
