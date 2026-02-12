@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: book-review-config
+  namespace: book-review
+data:
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  DB_NAME: book_review
+  DB_USER: root
+
+  # URLs internes au cluster (services Kubernetes)
+  NEXT_PUBLIC_AUTH_BASE_URL: "http://auth-service:4001"
+  NEXT_PUBLIC_BOOKS_BASE_URL: "http://books-service:4002"
