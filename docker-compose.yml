@@ -63,6 +63,13 @@ services:
       JWT_SECRET: supersecretjwt
     ports:
       - "4002:4002"
+  jenkins:
+    image: jenkins/jenkins:lts
+    ports:
+      - "8090:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
 
   frontend:
     build:
