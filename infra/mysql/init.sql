@@ -1,5 +1,4 @@
-CREATE DATABASE IF NOT EXISTS book_review;
-USE book_review;
+  USE book_review;
 
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
