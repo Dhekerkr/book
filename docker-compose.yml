@@ -1,0 +1,81 @@
+services:
+  mysql:
+    build:
+      context: ./infra/mysql
+    container_name: book-review-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: book_review
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: book-review-phpmyadmin
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "8080:80"
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+    container_name: book-review-auth
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT: 4001
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: book_review
+      DB_PORT: 3306
+      JWT_SECRET: supersecretjwt
+    ports:
+      - "4001:4001"
+
+  books-service:
+    build:
+      context: ./services/books-service
+    container_name: book-review-books
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT: 4002
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: book_review
+      DB_PORT: 3306
+      JWT_SECRET: supersecretjwt
+    ports:
+      - "4002:4002"
+
+  frontend:
+    build:
+      context: .
+    container_name: book-review-frontend
+    depends_on:
+      - auth-service
+      - books-service
+    environment:
+      NEXT_PUBLIC_AUTH_BASE_URL: http://auth-service:4001
+      NEXT_PUBLIC_BOOKS_BASE_URL: http://books-service:4002
+    ports:
+      - "3000:3000"
+
+volumes:
+  mysql_data:
